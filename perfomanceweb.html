@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performance analysis</title>
+
+<style>
+ body {
+   font-family: Arial, sans-serif;
+   background: #f7f7f7;
+   margin: 0;
+   padding: 0;
+ }
+ header {
+   background: #2c3e50;
+   color: white;
+   padding: 20px;
+   text-align: center;
+ }
+ .updated {
+   margin-top: 5px;
+   font-size: 0.9em;
+   opacity: 0.8;
+ }
+ .container {
+   max-width: 900px;
+   margin: 30px auto;
+   background: white;
+   padding: 20px;
+   border-radius: 10px;
+   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+ }
+ .figure-block {
+   margin-bottom: 40px;
+   text-align: center;
+ }
+ img {
+   width: 100%;
+   max-width: 800px;
+   border-radius: 8px;
+   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+   cursor: pointer;
+ }
+ .caption {
+   margin-top: 10px;
+   font-size: 1.1em;
+   color: #555;
+ }
+ .report-container {
+   text-align: center;
+   margin-bottom: 30px;
+ }
+ .report-btn {
+   background: #2c3e50;
+   color: white;
+   padding: 12px 20px;
+   border: none;
+   border-radius: 8px;
+   font-size: 1em;
+   cursor: pointer;
+   transition: 0.2s;
+ }
+ .report-btn:hover {
+   background: #1b2836;
+ }
+ footer {
+   text-align: center;
+   padding: 20px;
+   color: #666;
+ }
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Performance analysis</h1>
+  <p>Figures updated weekly</p>
+  <div class="updated" id="updateDate"></div>
+</header>
+
+<div class="container">
+
+  <div class="report-container">
+    <button class="report-btn" onclick="downloadReport()">Download report</button>
+  </div>
+
+  <div class="figure-block">
+    <a href="images/performance1.png" target="_blank">
+      <img src="images/performance1.png" alt="Performance 1">
+    </a>
+    <div class="caption">Predicted PGV with respect to the observed PGV, using the calibrated law in one-second P-time window. 
+      Points are colored following the expected potential damage scale. The black solid line is the one-to-one line. 
+      In top left corner, the histogram of the prediction error (PGVpred – PGVobs) is reported.
+    </div>
+  </div>
+
+  <div class="figure-block">
+    <a href="images/performance2.png" target="_blank">
+      <img src="images/performance2.png" alt="Performance 2">
+    </a>
+    <div class="caption">
+      On y-axis: the magnitude Mw calculated using Pd x tauc and an  average radius for ALTA.
+      On x-axis: the magnitude calculated using Pd x tauc and the radius obtained from Ts–Tp downstream of SAVE.
+    </div>
+  </div>
+
+  <div class="figure-block">
+    <a href="images/performance3.png" target="_blank">
+      <img src="images/performance3.png" alt="Performance 3">
+    </a>
+    <div class="caption">
+      The performance is assessed in terms of Successful alert (SA) (dark green), Successful No-alert (SNA) (light green), Missed Alert (MA) (red) and False Alert (FA) (yellow) for different thresholds in IMCS. 
+      For each IMCSthreshold, the percentage of SA, SNA, MA, and FA is shown. 
+      Panel A shows the performance for IMCSthreshold=3; 
+      Panel B shows the performance for IMCSthreshold=4; 
+      Panel C shows the performance for IMCSthreshold=5.
+    </div>
+  </div>
+
+</div>
+
+<footer>© 2025 - Performance Analysis of SAVE @ ALTA</footer>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+  // Fix necessario per accedere a jsPDF in modo corretto
+  window.jsPDF = window.jspdf.jsPDF;
+</script>
+
+<script>
+// Data ultimo aggiornamento
+document.getElementById('updateDate').textContent =
+  "Ultimo aggiornamento: " + new Date().toLocaleDateString('it-IT');
+
+
+// Funzione download PDF
+async function downloadReport() {
+  const doc = new jsPDF('p', 'mm', 'a4');
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+  const maxImgWidth = pageWidth - margin * 2;
+  const maxImgHeight = pageHeight - margin * 2 - 20;
+
+  // Pagina titolo
+  doc.setFontSize(20);
+  doc.text("Performance Settimanali", pageWidth / 2, 30, { align: 'center' });
+  doc.setFontSize(12);
+  doc.text("Generato il: " + new Date().toLocaleDateString('it-IT'),
+           pageWidth / 2, 40, { align: 'center' });
+
+  doc.addPage();
+
+  const figureBlocks = document.querySelectorAll('.figure-block');
+
+  for (let i = 0; i < figureBlocks.length; i++) {
+
+    const imgElement = figureBlocks[i].querySelector('img');
+    const caption = figureBlocks[i].querySelector('.caption').textContent;
+
+    const imgData = await getBase64(imgElement);
+
+    const img = new Image();
+    img.src = imgData;
+    await img.decode();
+
+    let width = img.width;
+    let height = img.height;
+
+    const ratio = Math.min(maxImgWidth / width, maxImgHeight / height, 1);
+
+    width *= ratio;
+    height *= ratio;
+
+    const x = (pageWidth - width) / 2;
+    let y = margin;
+
+    doc.addImage(imgData, 'PNG', x, y, width, height);
+
+    y += height + 5;
+    doc.setFontSize(12);
+    doc.text(caption, pageWidth / 2, y, { align: 'center' });
+
+    if (i < figureBlocks.length - 1) {
+      doc.addPage();
+    }
+  }
+
+  doc.save('Performance_Settimanali.pdf');
+}
+
+
+// Converte un <img> in Base64 leggibile dal canvas
+function getBase64(imgElement) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.src = imgElement.src; // niente crossOrigin!
+  });
+}
+</script>
+
+</body>
+</html>
